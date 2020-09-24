@@ -66,20 +66,39 @@
 #include <stdio.h>
 #include <wiringPi.h>
 
-#define	LED	8
+#define	RC_PIN 8
 
-int main (void)
+#define POWER_ON_OFF     0x0000100c
+#define POWER_ON         0x00100c01
+#define POWER_OFF        0x00100c01
+
+int main(int argc, char *argv[])
 {
-  printf ("Raspberry Pi blink\n") ;
+  if (argc != 1) {
+    exit(1);
+  }
+
+  int command = 0;
+
+  switch(argv[0]) {
+    case '0':
+      command = POWER_ON_OFF; break;
+    case '1':
+      command = POWER_ON; break;
+    case '2':
+      command = POWER_OFF; break;
+  }
+
+  printf ("Sending %i\n", command) ;
 
   wiringPiSetup () ;
-  pinMode (LED, OUTPUT) ;
+  pinMode (RC_PIN, OUTPUT) ;
 
   for (;;)
   {
-    digitalWrite (LED, HIGH) ;	// On
+    digitalWrite (RC_PIN, HIGH) ;	// On
     delay (500) ;		// mS
-    digitalWrite (LED, LOW) ;	// Off
+    digitalWrite (RC_PIN, LOW) ;	// Off
     delay (500) ;
   }
   return 0 ;
