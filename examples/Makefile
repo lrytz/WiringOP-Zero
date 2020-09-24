@@ -35,7 +35,7 @@ LDLIBS    = -lwiringPi -lwiringPiDev -lpthread -lm
 # Should not alter anything below this line
 ###############################################################################
 
-SRC	=	blink.c blink8.c blink12.c					\
+SRC	=	marantz.c blink.c blink8.c blink12.c					\
 		blink12drcs.c							\
 		pwm.c								\
 		speed.c wfi.c isr.c isr-osc.c					\
@@ -55,6 +55,10 @@ all:
 	@echo ""
 
 really-all:	$(BINS)
+
+marantz:	marantz.o
+	@echo [link]
+	@$(CC) -o $@ marantz.o $(LDFLAGS) $(LDLIBS)
 
 blink:	blink.o
 	@echo [link]
