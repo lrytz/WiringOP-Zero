@@ -64,6 +64,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <wiringPi.h>
 
 #define	RC_PIN 8
@@ -74,22 +75,20 @@
 
 int main(int argc, char *argv[])
 {
-  if (argc != 1) {
+  if (argc != 2) {
+    printf("RC5/RC5x command missing\nUsage: %s <code>\n  <code> = 0xSSCC or 0xSSCCDD\n  where SS = system, CC = command, DD = data\n", argv[0]);
     exit(1);
   }
 
-  int command = 0;
+  char * endptr;
+  int command = (int)strtol(argv[1], &endptr, 0);
 
-  switch(argv[0]) {
-    case '0':
-      command = POWER_ON_OFF; break;
-    case '1':
-      command = POWER_ON; break;
-    case '2':
-      command = POWER_OFF; break;
+  if (*endptr != '\0') {
+    printf("Failed to parse integer '%s'\n", argv[1]);
+    exit(1);
   }
-
-  printf ("Sending %i\n", command) ;
+  
+  printf ("Int: %i\n", command) ;
 
   wiringPiSetup () ;
   pinMode (RC_PIN, OUTPUT) ;
