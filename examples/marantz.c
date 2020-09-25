@@ -20,7 +20,7 @@
  *  - command: power toggle is 12 (0xc)
  *
  * Example: send power toggle 0x10|0x0c
- *  - bit sequence: 11|1|10000|001100
+ *  - bit sequence (14 bits): 11|1|10000|001100
  *  - power sequence: 0101|01|0110101010|101001011010
  *
  * The second start bit is often used to extend the command range.
@@ -40,7 +40,7 @@
  *  - 6 bits of data / extension
  *
  * Example: send power on 0x10|0x0c|0x01
- *  - bit sequence: 1|1|0|10000|PAUSE|001100|000001
+ *  - bit sequence (20 bits, 2 pause): 1|1|0|10000|PAUSE|001100|000001
  *  - power sequence: 01|01|10|0110101010|0000|101001011010|101010101001
  *
  * Copyright (c) 2012-2013 Gordon Henderson. <projects@drogon.net>
@@ -65,13 +65,44 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <wiringPi.h>
 
 #define	RC_PIN 8
 
-#define POWER_ON_OFF     0x0000100c
-#define POWER_ON         0x00100c01
-#define POWER_OFF        0x00100c01
+#define PULSE 889
+// #define PULSE 88900 // LED DEBUG SPEED
+
+#define DBG 0
+
+int inv(int bit) {
+  if (bit == 1) return 0;
+  return 1;
+}
+
+void send(int signal, bool extended) {
+  int x = 13;
+  if (extended)
+    x = 21;
+  while (x >= 0) {
+    if (extended && x == 13) {
+      if (DBG) printf("PP");
+      digitalWrite(RC_PIN, LOW);
+      delayMicroseconds(PULSE * 4);
+      x -= 2;
+    } else {
+      int bit = (signal >> x) & 1;
+      if (DBG) printf("%i", bit);
+      digitalWrite(RC_PIN, inv(bit));
+      delayMicroseconds(PULSE);
+      digitalWrite(RC_PIN, bit);
+      delayMicroseconds(PULSE);
+      x -= 1;
+    }
+  }
+  digitalWrite(RC_PIN, LOW);
+  if (DBG) printf("\n");
+}
 
 int main(int argc, char *argv[])
 {
@@ -81,24 +112,45 @@ int main(int argc, char *argv[])
   }
 
   char * endptr;
-  int command = (int)strtol(argv[1], &endptr, 0);
+  int code = (int)strtol(argv[1], &endptr, 0);
 
   if (*endptr != '\0') {
     printf("Failed to parse integer '%s'\n", argv[1]);
     exit(1);
   }
   
-  printf ("Int: %i\n", command) ;
+  if (DBG) printf("Int: %i\n", code);
 
-  wiringPiSetup () ;
-  pinMode (RC_PIN, OUTPUT) ;
+  bool extended = (code & 0xff0000) != 0;
 
-  for (;;)
-  {
-    digitalWrite (RC_PIN, HIGH) ;	// On
-    delay (500) ;		// mS
-    digitalWrite (RC_PIN, LOW) ;	// Off
-    delay (500) ;
+  wiringPiSetup() ;
+  pinMode(RC_PIN, OUTPUT);
+
+  int signal = 0;
+
+  if (!extended) {
+    int system = (code & 0xff00) >> 8;
+    int command = code & 0xff;
+    signal |= 1 << 13;
+    if (command < 64)
+      signal |= 1 << 12;
+    signal |= system << 6;
+    signal |= command & 0x1f;
+    if (DBG) printf("normal signal %i\n", signal);
+    send(signal, extended);
+  } else {
+    int system = (code & 0xff0000) >> 16;
+    int command = (code & 0xff00) >> 8;
+    int data = code & 0xff;
+    signal |= 1 << 21;
+    if (command < 64)
+      signal |= 1 << 20;
+    signal |= system << 14;
+    signal |= (command & 0x1f) << 6;
+    signal |= data;
+    if (DBG) printf("extended signal %i\n", signal);
+    send(signal, extended);
   }
+
   return 0 ;
 }
