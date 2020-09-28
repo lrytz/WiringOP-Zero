@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
     if (command < 64)
       signal |= 1 << 12;
     signal |= system << 6;
-    signal |= command & 0x1f;
+    signal |= command & 0x3f;
     if (DBG) printf("normal signal %i\n", signal);
     send(signal, extended);
   } else {
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
     if (command < 64)
       signal |= 1 << 20;
     signal |= system << 14;
-    signal |= (command & 0x1f) << 6;
+    signal |= (command & 0x3f) << 6;
     signal |= data;
     if (DBG) printf("extended signal %i\n", signal);
     send(signal, extended);
